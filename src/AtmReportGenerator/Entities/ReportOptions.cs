@@ -2,7 +2,7 @@
 
 namespace AtmReportGenerator.Entities
 {
-    public class AtmReportRequest
+    public class ReportOptions
     {
         public List<string> LogFilePaths { get; set; }
         public string DestinationFolder { get; set; }
