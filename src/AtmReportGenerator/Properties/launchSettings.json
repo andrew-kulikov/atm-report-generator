@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "AtmReportGenerator": {
+      "commandName": "Project",
+      "commandLineArgs": "-i \"D:\\git\\atm-report-generator\\data\\in\" -o \"D:\\git\\atm-report-generator\\data\\out\" "
+    }
+  }
+}

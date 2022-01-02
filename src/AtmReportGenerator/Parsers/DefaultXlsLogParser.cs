@@ -5,12 +5,20 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using AtmReportGenerator.Entities;
+using AtmReportGenerator.Exceptions;
 using ExcelDataReader;
 
 namespace AtmReportGenerator.Parsers
 {
     public class DefaultXlsLogParser : ILogParser
     {
+        private readonly ReportGeneratorOptions _generatorOptions;
+
+        public DefaultXlsLogParser(ReportGeneratorOptions generatorOptions)
+        {
+            _generatorOptions = generatorOptions;
+        }
+
         public AtmLog ParseLog(string path)
         {
             using (var stream = File.Open(path, FileMode.Open, FileAccess.Read))
@@ -18,13 +26,15 @@ namespace AtmReportGenerator.Parsers
                 using (var reader = ExcelReaderFactory.CreateReader(stream))
                 {
                     var dataSet = reader.AsDataSet();
-
-                    // TODO: Add if not found
+                    
                     var sheet = dataSet.Tables["Sheet1"];
-
-                    // TODO: Throw if not found - pass row
+                    if (sheet == null) throw new AtmLogParseException("Table 'Sheet1' not found");
+                    
                     var atmInfo = (string)sheet.Rows[1].ItemArray[0];
+                    if (string.IsNullOrEmpty(atmInfo)) throw new AtmLogParseException("Cannot find atm info header");
+
                     var atmId = atmInfo.Split(' ')[0];
+                    if (string.IsNullOrEmpty(atmInfo)) throw new AtmLogParseException($"Cannot atm id from header {atmInfo}");
 
                     var data = ParseRows(sheet);
 
@@ -38,7 +48,7 @@ namespace AtmReportGenerator.Parsers
             }
         }
 
-        private static List<AtmLogRecord> ParseRows(DataTable sheet)
+        private List<AtmLogRecord> ParseRows(DataTable sheet)
         {
             var data = new List<AtmLogRecord>();
 
@@ -47,8 +57,7 @@ namespace AtmReportGenerator.Parsers
                 var row = sheet.Rows[i];
                 var logRecord = new AtmLogRecord
                 {
-                    // TODO: Throw if invalid format and pass format as optional parameter
-                    Time = DateTime.ParseExact((string)row[0], "dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture),
+                    Time = DateTime.ParseExact((string)row[0], _generatorOptions.DateFormat, CultureInfo.InvariantCulture),
                     RemainingCash = (double)row[1],
                     WithdrawAmount = (double)row[2],
                     ExpectedWithdrawAmount = (double)row[3],

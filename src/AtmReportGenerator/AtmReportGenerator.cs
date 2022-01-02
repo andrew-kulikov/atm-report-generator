@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using AtmReportGenerator.Entities;
 using AtmReportGenerator.Exporters;
 using AtmReportGenerator.Logging;
@@ -10,9 +12,9 @@ namespace AtmReportGenerator
     public class AtmReportGenerator
     {
         private readonly EventCollector _eventCollector;
+        private readonly IReportExporter _exporter;
         private readonly ILogger _logger;
         private readonly ILogParser _logParser;
-        private readonly IReportExporter _exporter;
         private readonly WorkingDayRemainingCashCollector _workingDayRemainingCashCollector;
 
         public AtmReportGenerator(ILogParser logParser, ILogger logger, IReportExporter exporter)
@@ -25,9 +27,10 @@ namespace AtmReportGenerator
             _workingDayRemainingCashCollector = new WorkingDayRemainingCashCollector();
         }
 
-        public void GenerateReport(ReportOptions options)
+        public void GenerateReport(ReportGeneratorOptions generatorOptions)
         {
-            var reports = options.LogFilePaths.Select(BuildSingleAtmReport).ToList();
+            var logFilePaths = GetLogFilePaths(generatorOptions.LogFileDirectory);
+            var reports = logFilePaths.Select(BuildSingleAtmReport).ToList();
 
             var aggregatedReport = new AggregatedAtmReport { Reports = reports };
 
@@ -43,16 +46,17 @@ namespace AtmReportGenerator
             var events = _eventCollector.CollectEvents(log).ToList();
             var workingDayCashStats = _workingDayRemainingCashCollector.Process(log).ToList();
 
-            var report = new AtmReport
+            return new AtmReport
             {
                 AtmId = log.AtmId,
                 AtmEvents = events,
                 WorkingDayStartReports = workingDayCashStats
             };
-
-            //_logger.LogReport(report);
-
-            return report;
         }
+
+        private List<string> GetLogFilePaths(string logFileDirectory) => 
+            Directory.GetFiles(logFileDirectory)
+                .Where(f => Path.GetExtension(f) == ".xls")
+                .ToList();
     }
 }

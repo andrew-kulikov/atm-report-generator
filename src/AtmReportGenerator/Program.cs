@@ -1,30 +1,46 @@
-﻿using System.Collections.Generic;
-using AtmReportGenerator.Entities;
+﻿using AtmReportGenerator.Entities;
 using AtmReportGenerator.Exporters;
 using AtmReportGenerator.Logging;
 using AtmReportGenerator.Parsers;
+using CommandLine;
 
 namespace AtmReportGenerator
 {
+    public class ReportGeneratorConsoleOptions
+    {
+        [Option('i', "input", Required = true, HelpText = "Path to folder with input Excel files. Example: D:\\Temp\\AtmLogs\\input")]
+        public string LogFileDirectory { get; set; }
+
+        [Option('o', "out", Required = false, HelpText = "Path to folder with input Excel files. Example: D:\\Temp\\AtmLogs\\out", Default = "out")]
+        public string DestinationFolder { get; set; }
+
+        [Option('f', "date-format", Required = false, HelpText = "Date format. Example: dd.MM.yyyy HH:mm", Default = "dd.MM.yyyy HH:mm")]
+        public string DateFormat { get; set; }
+    }
+
     public class Program
     {
         public static void Main(string[] args)
         {
-            var options = new ReportOptions
-            {
-                LogFilePaths = new List<string>
+            Parser.Default.ParseArguments<ReportGeneratorConsoleOptions>(args)
+                .WithParsed(consoleOptions =>
                 {
-                    @"D:\git\atm-report-generator\data\in\12240.xls",
-                    @"D:\git\atm-report-generator\data\in\12494.xls",
-                    @"D:\git\atm-report-generator\data\in\12833.xls",
-                    @"D:\git\atm-report-generator\data\in\12909.xls",
-                    @"D:\git\atm-report-generator\data\in\13650.xls"
-                },
-                DestinationFolder = @"D:\git\atm-report-generator\data\out"
-            };
+                    var options = new ReportGeneratorOptions
+                    {
+                        LogFileDirectory = consoleOptions.LogFileDirectory,
+                        DestinationFolder = consoleOptions.DestinationFolder,
+                        DateFormat = consoleOptions.DateFormat
+                    };
 
-            var parser = new DefaultXlsLogParser();
+                    RunApplication(options);
+                });
+        }
+
+        private static void RunApplication(ReportGeneratorOptions options)
+        {
             var logger = new DefaultConsoleLogger();
+
+            var parser = new DefaultXlsLogParser(options);
             var exporter = new TxtFilesReportExporter(logger, options);
             var reportGenerator = new AtmReportGenerator(parser, logger, exporter);
 
